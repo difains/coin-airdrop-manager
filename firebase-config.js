@@ -1,5 +1,4 @@
 // Firebase 설정
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCNnq_E9RvVTZ-hXezmhbKqLz0TeynSCLI",
   authDomain: "difains.github.io",

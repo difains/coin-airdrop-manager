@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>캘린더</title>
+    <title>에어드랍 등록</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
             <button class="hamburger" onclick="toggleSidebar()">☰</button>
-            <div class="logo">캘린더</div>
+            <div class="logo">에어드랍 등록</div>
             <div></div>
         </div>
 
@@ -19,7 +19,7 @@
             <div class="sidebar-header">메뉴</div>
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html">대시보드</a></li>
-                <li><a href="calendar.html">캘린더</a></li>
+                <li><a href="calendar.html">에어드랍 등록</a></li>
                 <li><a href="admin.html">일정관리</a></li>
                 <li><a href="#" onclick="logout()">로그아웃</a></li>
             </ul>
@@ -243,25 +243,22 @@
             
             while (currentDate <= endDate) {
                 const dateStr = currentDate.toISOString().split('T')[0];
-                const checkboxItem = document.createElement('div');
-                checkboxItem.className = 'checkbox-item';
                 
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = `day-${dateStr}`;
-                checkbox.value = dateStr;
+                const dayButton = document.createElement('button');
+                dayButton.type = 'button';
+                dayButton.className = 'day-button';
+                dayButton.dataset.date = dateStr;
+                dayButton.textContent = `${dayCount}일차\n(${dateStr})`;
                 
                 if (existingParticipation && existingParticipation.participatedDays && existingParticipation.participatedDays[dateStr]) {
-                    checkbox.checked = true;
+                    dayButton.classList.add('selected');
                 }
                 
-                const label = document.createElement('label');
-                label.htmlFor = `day-${dateStr}`;
-                label.textContent = `${dayCount}일차 (${dateStr})`;
+                dayButton.addEventListener('click', () => {
+                    dayButton.classList.toggle('selected');
+                });
                 
-                checkboxItem.appendChild(checkbox);
-                checkboxItem.appendChild(label);
-                dayCheckboxes.appendChild(checkboxItem);
+                dayCheckboxes.appendChild(dayButton);
                 
                 currentDate.setDate(currentDate.getDate() + 1);
                 dayCount++;
@@ -275,13 +272,13 @@
             const profitAmount = parseFloat(document.getElementById('profitAmount').value) || 0;
             
             const participatedDays = {};
-            const checkboxes = document.querySelectorAll('#dayCheckboxes input[type="checkbox"]:checked');
-            checkboxes.forEach(checkbox => {
-                participatedDays[checkbox.value] = true;
+            const selectedButtons = document.querySelectorAll('.day-button.selected');
+            selectedButtons.forEach(button => {
+                participatedDays[button.dataset.date] = true;
             });
             
-            const totalDays = document.querySelectorAll('#dayCheckboxes input[type="checkbox"]').length;
-            const isCompleted = checkboxes.length === totalDays;
+            const totalDays = document.querySelectorAll('.day-button').length;
+            const isCompleted = selectedButtons.length === totalDays;
             
             const participationData = {
                 coinName,

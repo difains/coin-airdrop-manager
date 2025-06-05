@@ -5,13 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>코인 에어드랍 관리 - 로그인</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Lottie Player 스크립트 추가 -->
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="card" style="margin-top: 50px;">
-            <h2 style="text-align: center; margin-bottom: 30px; color: #667eea;">
+            <h2 style="text-align: center; margin-bottom: 20px; color: #667eea;">
                 🪙 코인 에어드랍 관리
             </h2>
+            
+            <!-- Lottie 애니메이션 추가 -->
+            <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+                <lottie-player 
+                    id="wallet-animation"
+                    src="Animation-1749107850149.json" 
+                    background="transparent" 
+                    speed="1" 
+                    style="width: 200px; height: 200px;" 
+                    loop 
+                    autoplay>
+                </lottie-player>
+            </div>
             
             <form id="loginForm">
                 <div class="form-group">

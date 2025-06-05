@@ -19,7 +19,7 @@
             <div class="sidebar-header">메뉴</div>
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html">대시보드</a></li>
-                <li><a href="calendar.html">캘린더</a></li>
+                <li><a href="calendar.html">에어드랍 등록</a></li>
                 <li><a href="admin.html">일정관리</a></li>
                 <li><a href="#" onclick="logout()">로그아웃</a></li>
             </ul>
@@ -101,6 +101,7 @@
             checkAuth();
             loadDashboardData();
             populateYearFilter();
+            setCurrentDateFilter(); // 오늘 날짜로 자동 설정
         });
 
         async function loadDashboardData() {
@@ -181,6 +182,16 @@
                 option.textContent = year + '년';
                 yearFilter.appendChild(option);
             }
+        }
+
+        // 오늘 날짜로 자동 설정
+        function setCurrentDateFilter() {
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth() + 1;
+
+            document.getElementById('yearFilter').value = currentYear;
+            document.getElementById('monthFilter').value = currentMonth;
         }
 
         function applyFilter() {

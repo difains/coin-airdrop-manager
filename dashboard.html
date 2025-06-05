@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대시보드</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="hamburger" onclick="toggleSidebar()">☰</button>
+            <div class="logo">대시보드</div>
+            <div></div>
+        </div>
+
+        <!-- 사이드바 -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">메뉴</div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html">대시보드</a></li>
+                <li><a href="calendar.html">캘린더</a></li>
+                <li><a href="admin.html">일정관리</a></li>
+                <li><a href="#" onclick="logout()">로그아웃</a></li>
+            </ul>
+        </div>
+        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+        <!-- 필터 -->
+        <div class="card">
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <select id="yearFilter">
+                    <option value="">전체 년도</option>
+                </select>
+                <select id="monthFilter">
+                    <option value="">전체 월</option>
+                    <option value="1">1월</option>
+                    <option value="2">2월</option>
+                    <option value="3">3월</option>
+                    <option value="4">4월</option>
+                    <option value="5">5월</option>
+                    <option value="6">6월</option>
+                    <option value="7">7월</option>
+                    <option value="8">8월</option>
+                    <option value="9">9월</option>
+                    <option value="10">10월</option>
+                    <option value="11">11월</option>
+                    <option value="12">12월</option>
+                </select>
+                <button class="btn btn-primary" onclick="applyFilter()">필터 적용</button>
+            </div>
+        </div>
+
+        <!-- 통계 -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalProfit">0</div>
+                <div class="stat-label">총 수익 (원)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalParticipation">0</div>
+                <div class="stat-label">총 참여 건수</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completedCount">0</div>
+                <div class="stat-label">완료된 참여</div>
+            </div>
+        </div>
+
+        <!-- 참여 내역 -->
+        <div class="card">
+            <h3>참여 내역</h3>
+            <div style="overflow-x: auto;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>코인명</th>
+                            <th>시작일</th>
+                            <th>종료일</th>
+                            <th>참여일수</th>
+                            <th>완료여부</th>
+                            <th>수익</th>
+                        </tr>
+                    </thead>
+                    <tbody id="participationList">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+    <script>
+        let allParticipations = [];
+
+        // 페이지 로드 시 실행
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadDashboardData();
+            populateYearFilter();
+        });
+
+        async function loadDashboardData() {
+            const currentUser = localStorage.getItem('currentUser');
+            if (!currentUser) return;
+
+            try {
+                // 사용자 참여 데이터 로드
+                const snapshot = await database.ref('participations/' + currentUser).once('value');
+                const participations = snapshot.val() || {};
+                
+                // 에어드랍 일정 데이터 로드
+                const scheduleSnapshot = await database.ref('airdrop_schedules').once('value');
+                const schedules = scheduleSnapshot.val() || {};
+
+                allParticipations = Object.keys(participations).map(key => {
+                    const participation = participations[key];
+                    const schedule = schedules[participation.coinName];
+                    
+                    return {
+                        id: key,
+                        ...participation,
+                        schedule: schedule
+                    };
+                });
+
+                updateStats();
+                displayParticipations(allParticipations);
+            } catch (error) {
+                console.error('데이터 로드 오류:', error);
+            }
+        }
+
+        function updateStats() {
+            const totalProfit = allParticipations.reduce((sum, p) => sum + (p.profit || 0), 0);
+            const totalCount = allParticipations.length;
+            const completedCount = allParticipations.filter(p => p.isCompleted).length;
+
+            document.getElementById('totalProfit').textContent = totalProfit.toLocaleString();
+            document.getElementById('totalParticipation').textContent = totalCount;
+            document.getElementById('completedCount').textContent = completedCount;
+        }
+
+        function displayParticipations(participations) {
+            const tbody = document.getElementById('participationList');
+            tbody.innerHTML = '';
+
+            participations.forEach(participation => {
+                const row = document.createElement('tr');
+                const schedule = participation.schedule;
+                
+                const participatedDays = participation.participatedDays ? Object.keys(participation.participatedDays).length : 0;
+                const totalDays = schedule ? Math.ceil((new Date(schedule.endDate) - new Date(schedule.startDate)) / (1000 * 60 * 60 * 24)) + 1 : 0;
+                
+                row.innerHTML = `
+                    <td>${participation.coinName}</td>
+                    <td>${schedule ? schedule.startDate : '-'}</td>
+                    <td>${schedule ? schedule.endDate : '-'}</td>
+                    <td>${participatedDays}/${totalDays}</td>
+                    <td>
+                        <span class="badge ${participation.isCompleted ? 'badge-complete' : 'badge-progress'}">
+                            ${participation.isCompleted ? '완료' : '진행중'}
+                        </span>
+                    </td>
+                    <td>${(participation.profit || 0).toLocaleString()}원</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function populateYearFilter() {
+            const yearFilter = document.getElementById('yearFilter');
+            const currentYear = new Date().getFullYear();
+            
+            for (let year = currentYear - 2; year <= currentYear + 1; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year + '년';
+                yearFilter.appendChild(option);
+            }
+        }
+
+        function applyFilter() {
+            const yearFilter = document.getElementById('yearFilter').value;
+            const monthFilter = document.getElementById('monthFilter').value;
+
+            let filteredParticipations = [...allParticipations];
+
+            if (yearFilter) {
+                filteredParticipations = filteredParticipations.filter(p => {
+                    if (!p.schedule) return false;
+                    const startYear = new Date(p.schedule.startDate).getFullYear();
+                    return startYear == yearFilter;
+                });
+            }
+
+            if (monthFilter) {
+                filteredParticipations = filteredParticipations.filter(p => {
+                    if (!p.schedule) return false;
+                    const startMonth = new Date(p.schedule.startDate).getMonth() + 1;
+                    return startMonth == monthFilter;
+                });
+            }
+
+            displayParticipations(filteredParticipations);
+        }
+    </script>
+</body>
+</html>

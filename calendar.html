@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>캘린더</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="hamburger" onclick="toggleSidebar()">☰</button>
+            <div class="logo">캘린더</div>
+            <div></div>
+        </div>
+
+        <!-- 사이드바 -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">메뉴</div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html">대시보드</a></li>
+                <li><a href="calendar.html">캘린더</a></li>
+                <li><a href="admin.html">일정관리</a></li>
+                <li><a href="#" onclick="logout()">로그아웃</a></li>
+            </ul>
+        </div>
+        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+        <!-- 캘린더 네비게이션 -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <button class="btn btn-secondary" onclick="changeMonth(-1)">◀</button>
+                <h3 id="currentMonth"></h3>
+                <button class="btn btn-secondary" onclick="changeMonth(1)">▶</button>
+            </div>
+            
+            <!-- 캘린더 -->
+            <div class="calendar">
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">일</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">월</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">화</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">수</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">목</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">금</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">토</div>
+            </div>
+            <div id="calendarDays" class="calendar"></div>
+        </div>
+
+        <!-- 참여 등록 버튼 -->
+        <div class="card">
+            <button class="btn btn-primary btn-full" onclick="openParticipationModal()">
+                에어드랍 참여 등록
+            </button>
+        </div>
+    </div>
+
+    <!-- 참여 등록/수정 모달 -->
+    <div class="modal" id="participationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>에어드랍 참여</h3>
+                <button class="close" onclick="closeParticipationModal()">&times;</button>
+            </div>
+            
+            <form id="participationForm">
+                <div class="form-group">
+                    <label for="coinSelect">코인명</label>
+                    <select id="coinSelect" required>
+                        <option value="">코인을 선택하세요</option>
+                    </select>
+                </div>
+                
+                <div id="participationDays" class="form-group">
+                    <label>참여 일정</label>
+                    <div class="checkbox-group" id="dayCheckboxes">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="paymentDate">지급일</label>
+                    <input type="date" id="paymentDate" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="profitAmount">최종 수익 (원)</label>
+                    <input type="number" id="profitAmount" min="0">
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">저장</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeParticipationModal()" style="flex: 1;">취소</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+    <script>
+        let currentDate = new Date();
+        let airdropSchedules = {};
+        let userParticipations = {};
+        let editingParticipationId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadData();
+            renderCalendar();
+        });
+
+        async function loadData() {
+            try {
+                // 에어드랍 일정 로드
+                const scheduleSnapshot = await database.ref('airdrop_schedules').once('value');
+                airdropSchedules = scheduleSnapshot.val() || {};
+                
+                // 사용자 참여 데이터 로드
+                const currentUser = localStorage.getItem('currentUser');
+                const participationSnapshot = await database.ref('participations/' + currentUser).once('value');
+                userParticipations = participationSnapshot.val() || {};
+                
+                populateCoinSelect();
+                renderCalendar();
+            } catch (error) {
+                console.error('데이터 로드 오류:', error);
+            }
+        }
+
+        function populateCoinSelect() {
+            const coinSelect = document.getElementById('coinSelect');
+            coinSelect.innerHTML = '<option value="">코인을 선택하세요</option>';
+            
+            Object.keys(airdropSchedules).forEach(coinName => {
+                const option = document.createElement('option');
+                option.value = coinName;
+                option.textContent = coinName;
+                coinSelect.appendChild(option);
+            });
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            document.getElementById('currentMonth').textContent = `${year}년 ${month + 1}월`;
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+            
+            const calendarDays = document.getElementById('calendarDays');
+            calendarDays.innerHTML = '';
+            
+            for (let i = 0; i < 42; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.textContent = date.getDate();
+                
+                if (date.getMonth() !== month) {
+                    dayElement.style.opacity = '0.3';
+                }
+                
+                // 참여 데이터 확인
+                const dateStr = date.toISOString().split('T')[0];
+                const participationsOnDate = Object.values(userParticipations).filter(p => {
+                    return p.participatedDays && p.participatedDays[dateStr];
+                });
+                
+                if (participationsOnDate.length > 0) {
+                    dayElement.classList.add('has-event');
+                    
+                    // 완료/진행중 뱃지 추가
+                    participationsOnDate.forEach(participation => {
+                        const badge = document.createElement('div');
+                        badge.className = `badge ${participation.isCompleted ? 'badge-complete' : 'badge-progress'}`;
+                        badge.textContent = participation.isCompleted ? '완료' : '진행';
+                        dayElement.appendChild(badge);
+                    });
+                }
+                
+                dayElement.addEventListener('click', () => {
+                    if (participationsOnDate.length > 0) {
+                        openParticipationModal(participationsOnDate[0]);
+                    }
+                });
+                
+                calendarDays.appendChild(dayElement);
+            }
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function openParticipationModal(participation = null) {
+            editingParticipationId = participation ? Object.keys(userParticipations).find(key => userParticipations[key] === participation) : null;
+            
+            if (participation) {
+                document.getElementById('coinSelect').value = participation.coinName;
+                document.getElementById('profitAmount').value = participation.profit || '';
+                loadParticipationDays(participation.coinName, participation);
+            } else {
+                document.getElementById('participationForm').reset();
+                document.getElementById('dayCheckboxes').innerHTML = '';
+            }
+            
+            document.getElementById('participationModal').classList.add('active');
+        }
+
+        function closeParticipationModal() {
+            document.getElementById('participationModal').classList.remove('active');
+            editingParticipationId = null;
+        }
+
+        document.getElementById('coinSelect').addEventListener('change', (e) => {
+            const coinName = e.target.value;
+            if (coinName) {
+                loadParticipationDays(coinName);
+            }
+        });
+
+        function loadParticipationDays(coinName, existingParticipation = null) {
+            const schedule = airdropSchedules[coinName];
+            if (!schedule) return;
+            
+            const startDate = new Date(schedule.startDate);
+            const endDate = new Date(schedule.endDate);
+            const dayCheckboxes = document.getElementById('dayCheckboxes');
+            dayCheckboxes.innerHTML = '';
+            
+            document.getElementById('paymentDate').value = schedule.paymentDate;
+            
+            let currentDate = new Date(startDate);
+            let dayCount = 1;
+            
+            while (currentDate <= endDate) {
+                const dateStr = currentDate.toISOString().split('T')[0];
+                const checkboxItem = document.createElement('div');
+                checkboxItem.className = 'checkbox-item';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `day-${dateStr}`;
+                checkbox.value = dateStr;
+                
+                if (existingParticipation && existingParticipation.participatedDays && existingParticipation.participatedDays[dateStr]) {
+                    checkbox.checked = true;
+                }
+                
+                const label = document.createElement('label');
+                label.htmlFor = `day-${dateStr}`;
+                label.textContent = `${dayCount}일차 (${dateStr})`;
+                
+                checkboxItem.appendChild(checkbox);
+                checkboxItem.appendChild(label);
+                dayCheckboxes.appendChild(checkboxItem);
+                
+                currentDate.setDate(currentDate.getDate() + 1);
+                dayCount++;
+            }
+        }
+
+        document.getElementById('participationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const coinName = document.getElementById('coinSelect').value;
+            const profitAmount = parseFloat(document.getElementById('profitAmount').value) || 0;
+            
+            const participatedDays = {};
+            const checkboxes = document.querySelectorAll('#dayCheckboxes input[type="checkbox"]:checked');
+            checkboxes.forEach(checkbox => {
+                participatedDays[checkbox.value] = true;
+            });
+            
+            const totalDays = document.querySelectorAll('#dayCheckboxes input[type="checkbox"]').length;
+            const isCompleted = checkboxes.length === totalDays;
+            
+            const participationData = {
+                coinName,
+                participatedDays,
+                profit: profitAmount,
+                isCompleted,
+                updatedAt: new Date().toISOString()
+            };
+            
+            try {
+                const currentUser = localStorage.getItem('currentUser');
+                const participationId = editingParticipationId || database.ref().child('participations').child(currentUser).push().key;
+                
+                await database.ref('participations/' + currentUser + '/' + participationId).set(participationData);
+                
+                alert('참여 정보가 저장되었습니다.');
+                closeParticipationModal();
+                loadData();
+            } catch (error) {
+                console.error('저장 오류:', error);
+                alert('저장 중 오류가 발생했습니다.');
+            }
+        });
+    </script>
+</body>
+</html>

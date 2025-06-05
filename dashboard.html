@@ -29,10 +29,10 @@
         <!-- 필터 -->
         <div class="card">
             <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-                <select id="yearFilter">
+                <select id="yearFilter" style="height: 48px;">
                     <option value="">전체 년도</option>
                 </select>
-                <select id="monthFilter">
+                <select id="monthFilter" style="height: 48px;">
                     <option value="">전체 월</option>
                     <option value="1">1월</option>
                     <option value="2">2월</option>
@@ -78,7 +78,6 @@
                             <th>시작일</th>
                             <th>종료일</th>
                             <th>참여일수</th>
-                            <th>완료여부</th>
                             <th>수익</th>
                         </tr>
                     </thead>
@@ -137,8 +136,14 @@
 
         function updateStats() {
             const totalProfit = allParticipations.reduce((sum, p) => sum + (p.profit || 0), 0);
-            const totalCount = allParticipations.length;
-            const completedCount = allParticipations.filter(p => p.isCompleted).length;
+            
+            // 코인명을 기준으로 중복 제거하여 건수 계산
+            const uniqueCoins = [...new Set(allParticipations.map(p => p.coinName))];
+            const totalCount = uniqueCoins.length;
+            
+            // 완료된 참여 건수 (코인명 기준)
+            const completedCoins = [...new Set(allParticipations.filter(p => p.isCompleted).map(p => p.coinName))];
+            const completedCount = completedCoins.length;
 
             document.getElementById('totalProfit').textContent = totalProfit.toLocaleString();
             document.getElementById('totalParticipation').textContent = totalCount;
@@ -161,11 +166,6 @@
                     <td>${schedule ? schedule.startDate : '-'}</td>
                     <td>${schedule ? schedule.endDate : '-'}</td>
                     <td>${participatedDays}/${totalDays}</td>
-                    <td>
-                        <span class="badge ${participation.isCompleted ? 'badge-complete' : 'badge-progress'}">
-                            ${participation.isCompleted ? '완료' : '진행중'}
-                        </span>
-                    </td>
                     <td>${(participation.profit || 0).toLocaleString()}원</td>
                 `;
                 tbody.appendChild(row);

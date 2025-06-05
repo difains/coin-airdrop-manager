@@ -26,6 +26,13 @@
         </div>
         <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
+        <!-- 상단 참여 등록 버튼 -->
+        <div class="card">
+            <button class="btn btn-primary btn-full" onclick="openParticipationModal()">
+                에어드랍 참여 등록
+            </button>
+        </div>
+
         <!-- 캘린더 네비게이션 -->
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -47,7 +54,7 @@
             <div id="calendarDays" class="calendar"></div>
         </div>
 
-        <!-- 참여 등록 버튼 -->
+        <!-- 하단 참여 등록 버튼 -->
         <div class="card">
             <button class="btn btn-primary btn-full" onclick="openParticipationModal()">
                 에어드랍 참여 등록
@@ -175,6 +182,12 @@
                 
                 if (participationsOnDate.length > 0) {
                     dayElement.classList.add('has-event');
+                    
+                    // 코인 심볼 표시
+                    const coinSymbol = document.createElement('div');
+                    coinSymbol.className = 'coin-symbol';
+                    coinSymbol.textContent = participationsOnDate[0].coinName;
+                    dayElement.appendChild(coinSymbol);
                     
                     // 완료/진행중 뱃지 추가
                     participationsOnDate.forEach(participation => {

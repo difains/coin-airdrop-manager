@@ -43,13 +43,13 @@
             
             <!-- 캘린더 -->
             <div class="calendar">
-                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">일</div>
-                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">월</div>
-                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">화</div>
-                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">수</div>
-                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">목</div>
-                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">금</div>
-                <div style="font-weight: bold; text-align: center; background: #f8f9fa;">토</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa; padding: 5px; font-size: 12px;">일</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa; padding: 5px; font-size: 12px;">월</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa; padding: 5px; font-size: 12px;">화</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa; padding: 5px; font-size: 12px;">수</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa; padding: 5px; font-size: 12px;">목</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa; padding: 5px; font-size: 12px;">금</div>
+                <div style="font-weight: bold; text-align: center; background: #f8f9fa; padding: 5px; font-size: 12px;">토</div>
             </div>
             <div id="calendarDays" class="calendar"></div>
         </div>
@@ -66,12 +66,12 @@
     <div class="modal" id="participationModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>에어드랍 참여</h3>
+                <h3 id="modalTitle">에어드랍 참여</h3>
                 <button class="close" onclick="closeParticipationModal()">&times;</button>
             </div>
             
             <form id="participationForm">
-                <div class="form-group">
+                <div class="form-group" id="coinSelectGroup">
                     <label for="coinSelect">코인명</label>
                     <select id="coinSelect" required>
                         <option value="">코인을 선택하세요</option>
@@ -111,6 +111,7 @@
         let airdropSchedules = {};
         let userParticipations = {};
         let editingParticipationId = null;
+        let isEditMode = false;
 
         document.addEventListener('DOMContentLoaded', () => {
             checkAuth();
@@ -183,10 +184,11 @@
                 if (participationsOnDate.length > 0) {
                     dayElement.classList.add('has-event');
                     
-                    // 코인 심볼 표시
+                    // 코인 심볼 표시 (말줄임 처리)
                     const coinSymbol = document.createElement('div');
                     coinSymbol.className = 'coin-symbol';
                     coinSymbol.textContent = participationsOnDate[0].coinName;
+                    coinSymbol.title = participationsOnDate[0].coinName; // 툴팁으로 전체 이름 표시
                     dayElement.appendChild(coinSymbol);
                     
                     // 완료/진행중 뱃지 추가
@@ -214,13 +216,41 @@
         }
 
         function openParticipationModal(participation = null) {
+            isEditMode = participation !== null;
             editingParticipationId = participation ? Object.keys(userParticipations).find(key => userParticipations[key] === participation) : null;
             
+            // 모달 제목 변경
+            document.getElementById('modalTitle').textContent = isEditMode ? '에어드랍 참여 수정' : '에어드랍 참여 등록';
+            
             if (participation) {
+                // 수정 모드: 코인 선택 비활성화
                 document.getElementById('coinSelect').value = participation.coinName;
+                document.getElementById('coinSelect').disabled = true;
+                document.getElementById('coinSelectGroup').style.display = 'none';
                 document.getElementById('profitAmount').value = participation.profit || '';
                 loadParticipationDays(participation.coinName, participation);
             } else {
+                // 등록 모드: 이미 참여한 코인은 선택 불가
+                const participatedCoins = [...new Set(Object.values(userParticipations).map(p => p.coinName))];
+                const coinSelect = document.getElementById('coinSelect');
+                
+                // 모든 옵션 활성화
+                Array.from(coinSelect.options).forEach(option => {
+                    option.disabled = false;
+                    option.style.display = 'block';
+                });
+                
+                // 이미 참여한 코인 비활성화
+                participatedCoins.forEach(coinName => {
+                    const option = Array.from(coinSelect.options).find(opt => opt.value === coinName);
+                    if (option) {
+                        option.disabled = true;
+                        option.textContent = `${coinName} (이미 참여함)`;
+                    }
+                });
+                
+                document.getElementById('coinSelect').disabled = false;
+                document.getElementById('coinSelectGroup').style.display = 'block';
                 document.getElementById('participationForm').reset();
                 document.getElementById('dayCheckboxes').innerHTML = '';
             }
@@ -231,6 +261,11 @@
         function closeParticipationModal() {
             document.getElementById('participationModal').classList.remove('active');
             editingParticipationId = null;
+            isEditMode = false;
+            
+            // 코인 선택 활성화 복원
+            document.getElementById('coinSelect').disabled = false;
+            document.getElementById('coinSelectGroup').style.display = 'block';
         }
 
         document.getElementById('coinSelect').addEventListener('change', (e) => {
@@ -284,6 +319,15 @@
             const coinName = document.getElementById('coinSelect').value;
             const profitAmount = parseFloat(document.getElementById('profitAmount').value) || 0;
             
+            // 신규 등록 시 중복 확인
+            if (!isEditMode) {
+                const existingParticipation = Object.values(userParticipations).find(p => p.coinName === coinName);
+                if (existingParticipation) {
+                    alert('이미 해당 코인에 참여하셨습니다. 기존 참여를 수정해주세요.');
+                    return;
+                }
+            }
+            
             const participatedDays = {};
             const selectedButtons = document.querySelectorAll('.day-button.selected');
             selectedButtons.forEach(button => {
@@ -301,13 +345,18 @@
                 updatedAt: new Date().toISOString()
             };
             
+            // 신규 등록 시에만 createdAt 추가
+            if (!isEditMode) {
+                participationData.createdAt = new Date().toISOString();
+            }
+            
             try {
                 const currentUser = localStorage.getItem('currentUser');
                 const participationId = editingParticipationId || database.ref().child('participations').child(currentUser).push().key;
                 
                 await database.ref('participations/' + currentUser + '/' + participationId).set(participationData);
                 
-                alert('참여 정보가 저장되었습니다.');
+                alert(isEditMode ? '참여 정보가 수정되었습니다.' : '참여 정보가 등록되었습니다.');
                 closeParticipationModal();
                 loadData();
             } catch (error) {

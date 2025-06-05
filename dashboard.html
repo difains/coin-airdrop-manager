@@ -100,7 +100,7 @@
             checkAuth();
             loadDashboardData();
             populateYearFilter();
-            setCurrentDateFilter(); // 오늘 날짜로 자동 설정
+            setCurrentDateFilter();
         });
 
         async function loadDashboardData() {
@@ -116,16 +116,25 @@
                 const scheduleSnapshot = await database.ref('airdrop_schedules').once('value');
                 const schedules = scheduleSnapshot.val() || {};
 
-                allParticipations = Object.keys(participations).map(key => {
+                // 코인명 기준으로 중복 제거
+                const uniqueParticipations = {};
+                Object.keys(participations).forEach(key => {
                     const participation = participations[key];
-                    const schedule = schedules[participation.coinName];
+                    const coinName = participation.coinName;
                     
-                    return {
-                        id: key,
-                        ...participation,
-                        schedule: schedule
-                    };
+                    // 같은 코인이 이미 있다면 더 최근 데이터로 업데이트
+                    if (!uniqueParticipations[coinName] || 
+                        new Date(participation.updatedAt || participation.createdAt) > 
+                        new Date(uniqueParticipations[coinName].updatedAt || uniqueParticipations[coinName].createdAt)) {
+                        uniqueParticipations[coinName] = {
+                            id: key,
+                            ...participation,
+                            schedule: schedules[coinName]
+                        };
+                    }
                 });
+
+                allParticipations = Object.values(uniqueParticipations);
 
                 updateStats();
                 displayParticipations(allParticipations);
@@ -136,14 +145,8 @@
 
         function updateStats() {
             const totalProfit = allParticipations.reduce((sum, p) => sum + (p.profit || 0), 0);
-            
-            // 코인명을 기준으로 중복 제거하여 건수 계산
-            const uniqueCoins = [...new Set(allParticipations.map(p => p.coinName))];
-            const totalCount = uniqueCoins.length;
-            
-            // 완료된 참여 건수 (코인명 기준)
-            const completedCoins = [...new Set(allParticipations.filter(p => p.isCompleted).map(p => p.coinName))];
-            const completedCount = completedCoins.length;
+            const totalCount = allParticipations.length;
+            const completedCount = allParticipations.filter(p => p.isCompleted).length;
 
             document.getElementById('totalProfit').textContent = totalProfit.toLocaleString();
             document.getElementById('totalParticipation').textContent = totalCount;
@@ -184,7 +187,6 @@
             }
         }
 
-        // 오늘 날짜로 자동 설정
         function setCurrentDateFilter() {
             const today = new Date();
             const currentYear = today.getFullYear();

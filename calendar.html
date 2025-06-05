@@ -71,6 +71,14 @@
             </div>
             
             <form id="participationForm">
+                <!-- 일자별 코인 선택 콤보 (다중 코인이 있을 때만 표시) -->
+                <div class="form-group" id="dateCoinsGroup" style="display: none;">
+                    <label for="dateCoinSelect">해당 일자의 코인 선택</label>
+                    <select id="dateCoinSelect">
+                        <option value="">코인을 선택하세요</option>
+                    </select>
+                </div>
+
                 <div class="form-group" id="coinSelectGroup">
                     <label for="coinSelect">코인명</label>
                     <select id="coinSelect" required>
@@ -112,6 +120,7 @@
         let userParticipations = {};
         let editingParticipationId = null;
         let isEditMode = false;
+        let selectedDate = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             checkAuth();
@@ -149,14 +158,31 @@
             });
         }
 
+        // 날짜 문자열을 로컬 날짜로 정확히 변환하는 함수
+        function parseLocalDate(dateString) {
+            const parts = dateString.split('-');
+            return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        }
+
+        // 날짜를 YYYY-MM-DD 형식으로 변환하는 함수
+        function formatDateString(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
             
             document.getElementById('currentMonth').textContent = `${year}년 ${month + 1}월`;
             
+            // 날짜 계산 수정 - 시간대 문제 해결
             const firstDay = new Date(year, month, 1);
             const lastDay = new Date(year, month + 1, 0);
+            
+            // 캘린더 시작일 계산 (일요일부터 시작)
             const startDate = new Date(firstDay);
             startDate.setDate(startDate.getDate() - firstDay.getDay());
             
@@ -175,8 +201,10 @@
                     dayElement.style.opacity = '0.3';
                 }
                 
+                // 날짜 문자열 생성 (로컬 시간 기준)
+                const dateStr = formatDateString(date);
+                
                 // 참여 데이터 확인
-                const dateStr = date.toISOString().split('T')[0];
                 const participationsOnDate = Object.values(userParticipations).filter(p => {
                     return p.participatedDays && p.participatedDays[dateStr];
                 });
@@ -184,25 +212,37 @@
                 if (participationsOnDate.length > 0) {
                     dayElement.classList.add('has-event');
                     
-                    // 코인 심볼 표시 (말줄임 처리)
+                    // 첫 번째 코인 심볼 표시
                     const coinSymbol = document.createElement('div');
                     coinSymbol.className = 'coin-symbol';
                     coinSymbol.textContent = participationsOnDate[0].coinName;
-                    coinSymbol.title = participationsOnDate[0].coinName; // 툴팁으로 전체 이름 표시
+                    coinSymbol.title = participationsOnDate.map(p => p.coinName).join(', ');
                     dayElement.appendChild(coinSymbol);
                     
+                    // 다중 코인이 있는 경우 개수 표시
+                    if (participationsOnDate.length > 1) {
+                        const countBadge = document.createElement('div');
+                        countBadge.className = 'badge badge-complete';
+                        countBadge.textContent = `+${participationsOnDate.length - 1}`;
+                        countBadge.style.top = '2px';
+                        countBadge.style.right = '2px';
+                        countBadge.style.bottom = 'auto';
+                        dayElement.appendChild(countBadge);
+                    }
+                    
                     // 완료/진행중 뱃지 추가
-                    participationsOnDate.forEach(participation => {
-                        const badge = document.createElement('div');
-                        badge.className = `badge ${participation.isCompleted ? 'badge-complete' : 'badge-progress'}`;
-                        badge.textContent = participation.isCompleted ? '완료' : '진행';
-                        dayElement.appendChild(badge);
-                    });
+                    const completedCount = participationsOnDate.filter(p => p.isCompleted).length;
+                    const badge = document.createElement('div');
+                    badge.className = `badge ${completedCount === participationsOnDate.length ? 'badge-complete' : 'badge-progress'}`;
+                    badge.textContent = completedCount === participationsOnDate.length ? '완료' : '진행';
+                    dayElement.appendChild(badge);
                 }
                 
                 dayElement.addEventListener('click', () => {
                     if (participationsOnDate.length > 0) {
-                        openParticipationModal(participationsOnDate[0]);
+                        openParticipationModal(null, dateStr, participationsOnDate);
+                    } else {
+                        openParticipationModal();
                     }
                 });
                 
@@ -215,57 +255,103 @@
             renderCalendar();
         }
 
-        function openParticipationModal(participation = null) {
+        function openParticipationModal(participation = null, clickedDate = null, dateParticipations = []) {
+            selectedDate = clickedDate;
             isEditMode = participation !== null;
             editingParticipationId = participation ? Object.keys(userParticipations).find(key => userParticipations[key] === participation) : null;
             
             // 모달 제목 변경
             document.getElementById('modalTitle').textContent = isEditMode ? '에어드랍 참여 수정' : '에어드랍 참여 등록';
             
-            if (participation) {
-                // 수정 모드: 코인 선택 비활성화
-                document.getElementById('coinSelect').value = participation.coinName;
-                document.getElementById('coinSelect').disabled = true;
-                document.getElementById('coinSelectGroup').style.display = 'none';
-                document.getElementById('profitAmount').value = participation.profit || '';
-                loadParticipationDays(participation.coinName, participation);
-            } else {
-                // 등록 모드: 이미 참여한 코인은 선택 불가
-                const participatedCoins = [...new Set(Object.values(userParticipations).map(p => p.coinName))];
-                const coinSelect = document.getElementById('coinSelect');
+            // 일자별 코인 선택 콤보 처리
+            const dateCoinsGroup = document.getElementById('dateCoinsGroup');
+            const dateCoinSelect = document.getElementById('dateCoinSelect');
+            
+            if (clickedDate && dateParticipations.length > 1) {
+                // 다중 코인이 있는 경우 콤보 표시
+                dateCoinsGroup.style.display = 'block';
+                dateCoinSelect.innerHTML = '<option value="">코인을 선택하세요</option>';
                 
-                // 모든 옵션 활성화
-                Array.from(coinSelect.options).forEach(option => {
-                    option.disabled = false;
-                    option.style.display = 'block';
+                dateParticipations.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.coinName;
+                    option.textContent = p.coinName;
+                    dateCoinSelect.appendChild(option);
                 });
                 
-                // 이미 참여한 코인 비활성화
-                participatedCoins.forEach(coinName => {
-                    const option = Array.from(coinSelect.options).find(opt => opt.value === coinName);
-                    if (option) {
-                        option.disabled = true;
-                        option.textContent = `${coinName} (이미 참여함)`;
+                // 일자별 코인 선택 이벤트
+                dateCoinSelect.addEventListener('change', (e) => {
+                    const selectedCoin = e.target.value;
+                    if (selectedCoin) {
+                        const selectedParticipation = dateParticipations.find(p => p.coinName === selectedCoin);
+                        if (selectedParticipation) {
+                            loadParticipationForEdit(selectedParticipation);
+                        }
                     }
                 });
-                
-                document.getElementById('coinSelect').disabled = false;
-                document.getElementById('coinSelectGroup').style.display = 'block';
-                document.getElementById('participationForm').reset();
-                document.getElementById('dayCheckboxes').innerHTML = '';
+            } else if (clickedDate && dateParticipations.length === 1) {
+                // 단일 코인인 경우 바로 로드
+                dateCoinsGroup.style.display = 'none';
+                loadParticipationForEdit(dateParticipations[0]);
+            } else {
+                // 새 등록인 경우
+                dateCoinsGroup.style.display = 'none';
+                setupNewParticipation();
             }
             
             document.getElementById('participationModal').classList.add('active');
+        }
+
+        function loadParticipationForEdit(participation) {
+            isEditMode = true;
+            editingParticipationId = Object.keys(userParticipations).find(key => userParticipations[key] === participation);
+            
+            document.getElementById('coinSelect').value = participation.coinName;
+            document.getElementById('coinSelect').disabled = true;
+            document.getElementById('coinSelectGroup').style.display = 'none';
+            document.getElementById('profitAmount').value = participation.profit || '';
+            loadParticipationDays(participation.coinName, participation);
+        }
+
+        function setupNewParticipation() {
+            isEditMode = false;
+            editingParticipationId = null;
+            
+            // 이미 참여한 코인은 선택 불가
+            const participatedCoins = [...new Set(Object.values(userParticipations).map(p => p.coinName))];
+            const coinSelect = document.getElementById('coinSelect');
+            
+            // 모든 옵션 활성화
+            Array.from(coinSelect.options).forEach(option => {
+                option.disabled = false;
+                option.style.display = 'block';
+            });
+            
+            // 이미 참여한 코인 비활성화
+            participatedCoins.forEach(coinName => {
+                const option = Array.from(coinSelect.options).find(opt => opt.value === coinName);
+                if (option) {
+                    option.disabled = true;
+                    option.textContent = `${coinName} (이미 참여함)`;
+                }
+            });
+            
+            document.getElementById('coinSelect').disabled = false;
+            document.getElementById('coinSelectGroup').style.display = 'block';
+            document.getElementById('participationForm').reset();
+            document.getElementById('dayCheckboxes').innerHTML = '';
         }
 
         function closeParticipationModal() {
             document.getElementById('participationModal').classList.remove('active');
             editingParticipationId = null;
             isEditMode = false;
+            selectedDate = null;
             
-            // 코인 선택 활성화 복원
+            // 초기화
             document.getElementById('coinSelect').disabled = false;
             document.getElementById('coinSelectGroup').style.display = 'block';
+            document.getElementById('dateCoinsGroup').style.display = 'none';
         }
 
         document.getElementById('coinSelect').addEventListener('change', (e) => {
@@ -279,8 +365,9 @@
             const schedule = airdropSchedules[coinName];
             if (!schedule) return;
             
-            const startDate = new Date(schedule.startDate);
-            const endDate = new Date(schedule.endDate);
+            // 날짜 파싱 수정
+            const startDate = parseLocalDate(schedule.startDate);
+            const endDate = parseLocalDate(schedule.endDate);
             const dayCheckboxes = document.getElementById('dayCheckboxes');
             dayCheckboxes.innerHTML = '';
             
@@ -290,7 +377,7 @@
             let dayCount = 1;
             
             while (currentDate <= endDate) {
-                const dateStr = currentDate.toISOString().split('T')[0];
+                const dateStr = formatDateString(currentDate);
                 
                 const dayButton = document.createElement('button');
                 dayButton.type = 'button';

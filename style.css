@@ -237,14 +237,16 @@ body {
     max-width: calc(100% - 4px) !important;
     width: auto !important;
     height: auto !important;
+    max-height: 10px !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     line-height: 1 !important;
     z-index: 5 !important;
+    display: inline-block !important;
 }
 
-/* 뱃지 기본 스타일 - 우측 하단 기준 */
+/* 뱃지 기본 스타일 - 크기 제한 강화 */
 .badge {
     position: absolute !important;
     bottom: 1px !important;
@@ -255,26 +257,33 @@ body {
     line-height: 1 !important;
     width: auto !important;
     height: auto !important;
-    min-width: 12px !important;
+    max-width: 15px !important;
+    max-height: 8px !important;
+    min-width: 8px !important;
+    min-height: 6px !important;
     text-align: center !important;
     z-index: 6 !important;
+    display: inline-block !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
 }
 
 .badge-complete {
     background: #28a745 !important;
-    right: 18px !important; /* 지급 뱃지 좌측에 위치 */
+    right: 18px !important;
 }
 
 .badge-progress {
     background: #ffc107 !important;
-    right: 18px !important; /* 지급 뱃지 좌측에 위치 */
+    right: 18px !important;
 }
 
-/* 지급일 뱃지 스타일 - 우측 하단 */
+/* 지급일 뱃지 스타일 - 크기 제한 강화 */
 .payment-badge {
     position: absolute !important;
     bottom: 1px !important;
-    right: 1px !important; /* 가장 우측에 위치 */
+    right: 1px !important;
     background: #dc3545 !important;
     color: white !important;
     font-size: 6px !important;
@@ -284,8 +293,15 @@ body {
     z-index: 10 !important;
     width: auto !important;
     height: auto !important;
-    min-width: 12px !important;
+    max-width: 15px !important;
+    max-height: 8px !important;
+    min-width: 8px !important;
+    min-height: 6px !important;
     text-align: center !important;
+    display: inline-block !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
 }
 
 /* 모달 스타일 */
@@ -457,14 +473,19 @@ body {
     
     .coin-symbol {
         font-size: 7px !important;
+        max-height: 8px !important;
     }
     
     .badge, .payment-badge {
         font-size: 5px !important;
+        max-width: 12px !important;
+        max-height: 7px !important;
+        min-width: 6px !important;
+        min-height: 5px !important;
     }
     
     .badge-complete, .badge-progress {
-        right: 14px !important; /* 모바일에서 간격 조정 */
+        right: 14px !important;
     }
 }
 
@@ -490,14 +511,19 @@ body {
     
     .coin-symbol {
         font-size: 6px !important;
+        max-height: 7px !important;
     }
     
     .badge, .payment-badge {
         font-size: 4px !important;
+        max-width: 10px !important;
+        max-height: 6px !important;
+        min-width: 5px !important;
+        min-height: 4px !important;
     }
     
     .badge-complete, .badge-progress {
-        right: 12px !important; /* 모바일에서 간격 조정 */
+        right: 12px !important;
     }
 }
 
@@ -514,6 +540,6 @@ body {
     }
     
     .badge-complete, .badge-progress {
-        right: 10px !important; /* 작은 화면에서 간격 조정 */
+        right: 10px !important;
     }
 }

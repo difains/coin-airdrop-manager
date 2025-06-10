@@ -238,16 +238,54 @@
                     dayElement.appendChild(badge);
                 }
 
-                // 지급일 뱃지 추가 (빨간색)
+                // 지급일 뱃지 추가 (완료 뱃지 우측에 위치)
+                const paymentCoins = [];
                 Object.entries(airdropSchedules).forEach(([coinName, schedule]) => {
                     if (schedule.paymentDate === dateStr) {
-                        const paymentBadge = document.createElement('div');
-                        paymentBadge.className = 'payment-badge';
-                        paymentBadge.textContent = '지급';
-                        paymentBadge.title = `${coinName} 지급일`;
-                        dayElement.appendChild(paymentBadge);
+                        paymentCoins.push(coinName);
                     }
                 });
+
+                if (paymentCoins.length > 0) {
+                    // 지급 코인명 표시 (좌상단, 기존 코인 심볼 아래)
+                    const paymentCoinSymbol = document.createElement('div');
+                    paymentCoinSymbol.className = 'coin-symbol';
+                    paymentCoinSymbol.style.top = '12px'; // 기존 코인 심볼 아래 위치
+                    paymentCoinSymbol.style.backgroundColor = '#ffebee';
+                    paymentCoinSymbol.style.color = '#d32f2f';
+                    paymentCoinSymbol.textContent = paymentCoins[0];
+                    paymentCoinSymbol.title = `지급일: ${paymentCoins.join(', ')}`;
+                    dayElement.appendChild(paymentCoinSymbol);
+
+                    // 지급 뱃지 (완료 뱃지 우측)
+                    const paymentBadge = document.createElement('div');
+                    paymentBadge.className = 'payment-badge';
+                    paymentBadge.textContent = '지급';
+                    paymentBadge.title = `${paymentCoins.join(', ')} 지급일`;
+                    
+                    // 완료 뱃지가 있는 경우 우측에 위치
+                    if (participationsOnDate.length > 0) {
+                        paymentBadge.style.bottom = '1px';
+                        paymentBadge.style.right = '18px'; // 완료 뱃지 우측
+                        paymentBadge.style.left = 'auto';
+                    } else {
+                        paymentBadge.style.bottom = '1px';
+                        paymentBadge.style.right = '1px';
+                    }
+                    
+                    dayElement.appendChild(paymentBadge);
+
+                    // 다중 지급 코인이 있는 경우 개수 표시
+                    if (paymentCoins.length > 1) {
+                        const paymentCountBadge = document.createElement('div');
+                        paymentCountBadge.className = 'payment-badge';
+                        paymentCountBadge.textContent = `+${paymentCoins.length - 1}`;
+                        paymentCountBadge.style.bottom = '8px'; // 지급 뱃지 위
+                        paymentCountBadge.style.right = '18px';
+                        paymentCountBadge.style.fontSize = '5px';
+                        dayElement.appendChild(paymentCountBadge);
+                    }
+                }
                 
                 dayElement.addEventListener('click', () => {
                     if (participationsOnDate.length > 0) {

@@ -237,6 +237,17 @@
                     badge.textContent = completedCount === participationsOnDate.length ? '완료' : '진행';
                     dayElement.appendChild(badge);
                 }
+
+                // 지급일 뱃지 추가 (빨간색)
+                Object.entries(airdropSchedules).forEach(([coinName, schedule]) => {
+                    if (schedule.paymentDate === dateStr) {
+                        const paymentBadge = document.createElement('div');
+                        paymentBadge.className = 'payment-badge';
+                        paymentBadge.textContent = '지급';
+                        paymentBadge.title = `${coinName} 지급일`;
+                        dayElement.appendChild(paymentBadge);
+                    }
+                });
                 
                 dayElement.addEventListener('click', () => {
                     if (participationsOnDate.length > 0) {

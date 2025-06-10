@@ -47,7 +47,7 @@
                     <option value="11">11월</option>
                     <option value="12">12월</option>
                 </select>
-                <button class="btn btn-primary" onclick="applyFilter()">필터 적용</button>
+                <button class="btn btn-primary" onclick="applyFilter()">조회</button>
             </div>
         </div>
 
@@ -60,6 +60,10 @@
             <div class="stat-card">
                 <div class="stat-number" id="totalParticipation">0</div>
                 <div class="stat-label">총 참여 건수</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="currentParticipation">0</div>
+                <div class="stat-label">현재 참여 건수</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number" id="completedCount">0</div>
@@ -148,8 +152,12 @@
             const totalCount = allParticipations.length;
             const completedCount = allParticipations.filter(p => p.isCompleted).length;
 
+            // 현재 참여 건수: 완료되지 않은 참여 건수
+            const currentCount = allParticipations.filter(p => !p.isCompleted).length;
+
             document.getElementById('totalProfit').textContent = totalProfit.toLocaleString();
             document.getElementById('totalParticipation').textContent = totalCount;
+            document.getElementById('currentParticipation').textContent = currentCount;
             document.getElementById('completedCount').textContent = completedCount;
         }
 

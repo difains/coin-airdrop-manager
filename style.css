@@ -244,11 +244,10 @@ body {
     z-index: 5 !important;
 }
 
-/* 뱃지 기본 스타일 */
+/* 뱃지 기본 스타일 - 우측 하단 기준 */
 .badge {
     position: absolute !important;
     bottom: 1px !important;
-    right: 1px !important;
     font-size: 6px !important;
     padding: 1px 2px !important;
     border-radius: 2px !important;
@@ -256,20 +255,26 @@ body {
     line-height: 1 !important;
     width: auto !important;
     height: auto !important;
+    min-width: 12px !important;
+    text-align: center !important;
     z-index: 6 !important;
 }
 
 .badge-complete {
     background: #28a745 !important;
+    right: 18px !important; /* 지급 뱃지 좌측에 위치 */
 }
 
 .badge-progress {
     background: #ffc107 !important;
+    right: 18px !important; /* 지급 뱃지 좌측에 위치 */
 }
 
-/* 지급일 뱃지 스타일 */
+/* 지급일 뱃지 스타일 - 우측 하단 */
 .payment-badge {
     position: absolute !important;
+    bottom: 1px !important;
+    right: 1px !important; /* 가장 우측에 위치 */
     background: #dc3545 !important;
     color: white !important;
     font-size: 6px !important;
@@ -457,6 +462,10 @@ body {
     .badge, .payment-badge {
         font-size: 5px !important;
     }
+    
+    .badge-complete, .badge-progress {
+        right: 14px !important; /* 모바일에서 간격 조정 */
+    }
 }
 
 @media (max-width: 480px) {
@@ -486,6 +495,10 @@ body {
     .badge, .payment-badge {
         font-size: 4px !important;
     }
+    
+    .badge-complete, .badge-progress {
+        right: 12px !important; /* 모바일에서 간격 조정 */
+    }
 }
 
 @media (max-width: 320px) {
@@ -498,5 +511,9 @@ body {
         min-height: 30px;
         max-height: 40px;
         font-size: 9px;
+    }
+    
+    .badge-complete, .badge-progress {
+        right: 10px !important; /* 작은 화면에서 간격 조정 */
     }
 }

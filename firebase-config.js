@@ -12,4 +12,3 @@ const firebaseConfig = {
 // Firebase 초기화
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
-const auth = firebase.auth();
